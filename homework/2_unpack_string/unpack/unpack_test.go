@@ -14,7 +14,7 @@ const crasher = "CRASHER"
 const data = "DATA"
 
 func TestUnpack(t *testing.T) {
-	cases := [...]struct {
+	cases := []struct {
 		Intput    string
 		Expected  string
 		IsCorrect bool
@@ -53,7 +53,7 @@ func TestParseInt(t *testing.T) {
 		return
 	}
 
-	cases := [...]struct {
+	cases := []struct {
 		Input     string
 		IsCorrect bool
 	}{
