@@ -2,6 +2,7 @@ package unpack
 
 import (
 	"errors"
+	"os"
 	"strconv"
 	"strings"
 	"unicode"
@@ -37,8 +38,7 @@ func Unpack(s string) (string, error) {
 
 			if anyCharBefore {
 				anyCharBefore = false
-				count, _ := strconv.Atoi(string(r))
-				b.WriteString(strings.Repeat(string(s[i-1]), count))
+				b.WriteString(strings.Repeat(string(s[i-1]), ParseInt(r)))
 			} else {
 				return errorString, errors.New("numbers are fobbiden, only figures are allowed")
 			}
@@ -69,4 +69,15 @@ func Unpack(s string) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+//test-purpose function to show how test functions with os.Exit(1)
+func ParseInt(r rune) int {
+	num, err := strconv.Atoi(string(r))
+
+	if err != nil {
+		os.Exit(1)
+	}
+
+	return num
 }

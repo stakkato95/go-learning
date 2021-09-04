@@ -16,5 +16,20 @@ run: build
 	./main
 .PHONY:run
 
+
+coverprofile:
+	go test -coverprofile=cover.out ./...
+.PHONY:coverprofile
+
+coverhtml: coverprofile
+	go tool cover -html=cover.out
+.PHONY:coverhtml
+
+
 clean:
 	rm main
+.PHONY:clean
+
+cleanCover:
+	rm cover.out
+.PHONY:cleanCover
