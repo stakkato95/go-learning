@@ -21,7 +21,7 @@ coverprofile:
 	go test -coverprofile=cover.out ./...
 .PHONY:coverprofile
 
-coverage:
+coverage: coverprofile
 	go tool cover -html=cover.out
 .PHONY:coverage
 
