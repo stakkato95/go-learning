@@ -14,7 +14,7 @@ func TestEmptyList(t *testing.T) {
 	assert.Nil(t, list.Front())
 	assert.Nil(t, list.Back())
 	assert.False(t, list.Remove(nil))
-	assert.False(t, list.MoveToFront(nil))
+	assert.Nil(t, list.MoveToFront(nil))
 }
 
 func TestSingleItemPush(t *testing.T) {
@@ -194,12 +194,12 @@ func TestRemove(t *testing.T) {
 func TestMoveToFrond(t *testing.T) {
 	t.Run("move nil", func(t *testing.T) {
 		list := mylist.NewList()
-		assert.False(t, list.MoveToFront(nil))
+		assert.Nil(t, list.MoveToFront(nil))
 	})
 
 	t.Run("empty list", func(t *testing.T) {
 		list := mylist.NewList()
-		assert.False(t, list.MoveToFront(&mylist.Item{}))
+		assert.Nil(t, list.MoveToFront(&mylist.Item{}))
 	})
 
 	t.Run("list with only one item", func(t *testing.T) {
@@ -207,7 +207,7 @@ func TestMoveToFrond(t *testing.T) {
 		list.PushBack("a")
 		front := list.Front()
 
-		assert.True(t, list.MoveToFront(list.Front()))
+		assert.NotNil(t, list.MoveToFront(list.Front()))
 		assert.Equal(t, front, list.Front())
 		assert.Equal(t, front, list.Back())
 	})
@@ -219,7 +219,7 @@ func TestMoveToFrond(t *testing.T) {
 		front := list.Front()
 		back := list.Back()
 
-		assert.True(t, list.MoveToFront(list.Front()))
+		assert.NotNil(t, list.MoveToFront(list.Front()))
 		assert.Equal(t, front, list.Front())
 		assert.Equal(t, back, list.Back())
 		assert.Equal(t, 2, list.Len())
@@ -232,7 +232,7 @@ func TestMoveToFrond(t *testing.T) {
 		front := list.Front()
 		back := list.Back()
 
-		assert.True(t, list.MoveToFront(list.Back()))
+		assert.NotNil(t, list.MoveToFront(list.Back()))
 		assert.Equal(t, back, list.Front())
 		assert.Equal(t, front, list.Back())
 		assert.Equal(t, 2, list.Len())
@@ -245,7 +245,7 @@ func TestMoveToFrond(t *testing.T) {
 		list.PushBack("c")
 		list.PushBack("d")
 
-		assert.True(t, list.MoveToFront(list.Front().Next))
+		assert.NotNil(t, list.MoveToFront(list.Front().Next))
 		assert.Equal(t, "b", list.Front().Value)
 		assert.Equal(t, "a", list.Front().Next.Value)
 		assert.Equal(t, 4, list.Len())
@@ -258,7 +258,7 @@ func TestMoveToFrond(t *testing.T) {
 		list.PushBack("c")
 		list.PushBack("d")
 
-		assert.True(t, list.MoveToFront(list.Back().Prev))
+		assert.NotNil(t, list.MoveToFront(list.Back().Prev))
 		assert.Equal(t, "c", list.Front().Value)
 		assert.Equal(t, "a", list.Front().Next.Value)
 		assert.Equal(t, "b", list.Front().Next.Next.Value)
@@ -274,7 +274,7 @@ func TestMoveToFrond(t *testing.T) {
 		list.PushBack("d")
 		list.PushBack("e")
 
-		assert.True(t, list.MoveToFront(list.Front().Next.Next))
+		assert.NotNil(t, list.MoveToFront(list.Front().Next.Next))
 		assert.Equal(t, "c", list.Front().Value)
 		assert.Equal(t, "a", list.Front().Next.Value)
 		assert.Equal(t, "b", list.Front().Next.Next.Value)

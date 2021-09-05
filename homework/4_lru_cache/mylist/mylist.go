@@ -16,7 +16,7 @@ type List interface {
 	PushFront(v Value) *Item
 	PushBack(v Value) *Item
 	Remove(i *Item) bool
-	MoveToFront(i *Item) bool
+	MoveToFront(i *Item) *Item
 	Clear()
 }
 
@@ -131,17 +131,17 @@ func (l *list) Remove(i *Item) bool {
 	}
 }
 
-func (l *list) MoveToFront(i *Item) bool {
+func (l *list) MoveToFront(i *Item) *Item {
 	if i == nil {
-		return false
+		return nil
 	}
 
 	if l.length == 0 {
-		return false
+		return nil
 	}
 
 	if l.length == 1 || i == l.first {
-		return true
+		return l.first
 	}
 
 	if l.length == 2 && i == l.last {
@@ -154,15 +154,14 @@ func (l *list) MoveToFront(i *Item) bool {
 
 		l.last = l.first
 		l.first = newFirst
-		return true
+		return newFirst
 	}
 
 	if ok := l.Remove(i); !ok {
-		return false
+		return nil
 	}
-	l.PushFront(i.Value)
 
-	return true
+	return l.PushFront(i.Value)
 }
 
 func (l *list) Clear() {

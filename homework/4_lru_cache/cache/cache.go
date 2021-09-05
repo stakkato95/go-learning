@@ -46,7 +46,7 @@ func (l *lruCache) Set(key string, value mylist.Value) bool {
 
 func (l *lruCache) Get(key string) (mylist.Value, bool) {
 	if item, ok := l.keys[key]; ok {
-		l.list.MoveToFront(item)
+		l.keys[key] = l.list.MoveToFront(item)
 		return item.Value, true
 	}
 	return nil, false
