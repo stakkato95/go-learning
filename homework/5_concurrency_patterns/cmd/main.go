@@ -8,5 +8,5 @@ import (
 
 func main() {
 	fmt.Println("hello")
-	internal.SimpleRxTest()
+	internal.TeeChannel()
 }
