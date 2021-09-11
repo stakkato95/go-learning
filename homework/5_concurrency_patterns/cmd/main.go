@@ -8,6 +8,5 @@ import (
 
 func main() {
 	fmt.Println("hello")
-
-	internal.WorkCancellationWithDoneChannel()
+	internal.SimpleRxTest()
 }
