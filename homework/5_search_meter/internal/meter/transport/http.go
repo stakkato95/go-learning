@@ -9,11 +9,13 @@ import (
 	"github.com/stakkato95/searchmeter/internal/meter"
 )
 
+//body for '/meter/single'
 type singleSearchEngineRequest struct {
 	Request       string `json:"request"`
 	TimeoutMillis int    `timeoutMillis:"timeoutMillis"`
 }
 
+//body for '/meter/all'
 type allSearchEnginesRequest struct {
 	Request string `json:"request"`
 }
@@ -29,18 +31,19 @@ func NewHTTP(meter meter.Meter) *HTTP {
 func (h *HTTP) StartSearchEngineRequest(w http.ResponseWriter, r *http.Request) {
 	var engineRequest singleSearchEngineRequest
 
+	//validate body json and its fields
 	if err := json.NewDecoder(r.Body).Decode(&engineRequest); err != nil {
 		log.Debug().Err(err).Msg("can not decode singleSearchEngineRequest")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	if ok, err := valid.ValidateStruct(&engineRequest); !ok {
 		log.Debug().Err(err).Msg("invalid singleSearchEngineRequest")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	//start metering and get the fastest search engine
 	stats, err := h.engineMeter.Start(r.Context(), engineRequest.Request, engineRequest.TimeoutMillis)
 	if err != nil {
 		log.Debug().Err(err).Msg("metering failed")
@@ -48,6 +51,7 @@ func (h *HTTP) StartSearchEngineRequest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	//error while encoding json should not happen, but check it anyway
 	if err := json.NewEncoder(w).Encode(stats); err != nil {
 		log.Debug().Err(err).Msg("failed to encode SearchEngineStats")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -63,15 +67,16 @@ func (h *HTTP) StartAllSearchEnginesRequest(w http.ResponseWriter, r *http.Reque
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	if ok, err := valid.ValidateStruct(&enginesRequest); !ok {
 		log.Debug().Err(err).Msg("invalid allSearchEnginesRequest")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	//start metering and get stats for all search engines
 	stats := h.engineMeter.StartAll(r.Context(), enginesRequest.Request)
 
+	//error while encoding json should not happen, but check it anyway
 	if err := json.NewEncoder(w).Encode(stats); err != nil {
 		log.Debug().Err(err).Msg("failed to encode []SearchEngineStats")
 		w.WriteHeader(http.StatusInternalServerError)

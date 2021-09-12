@@ -11,14 +11,17 @@ import (
 )
 
 func main() {
+	//create handler and its dependency graph
 	seclient := client.NewClient()
 	searchEngineMeter := meter.NewSearchEngineMeter(seclient)
 	searchHttp := transport.NewHTTP(searchEngineMeter)
 
+	//url<->handler mapping
 	mux := http.NewServeMux()
 	mux.HandleFunc("/meter/single", searchHttp.StartSearchEngineRequest)
 	mux.HandleFunc("/meter/all", searchHttp.StartAllSearchEnginesRequest)
 
+	//configure and start server
 	addr := ":8080"
 	server := http.Server{
 		Addr:         ":8080",
