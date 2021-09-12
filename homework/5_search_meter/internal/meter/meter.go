@@ -2,22 +2,15 @@ package meter
 
 import (
 	"context"
-	"net/http"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/stakkato95/searchmeter/internal/meter/client"
 )
 
 type SearchEngineStats struct {
 	TimeMillis int    `json:"timeMillis"`
 	EngineName string `json:"engineName"`
-}
-
-type searchEngineResponse struct {
-	StatusCode  int
-	RequestTime int64
-	Error       error
 }
 
 type Meter interface {
@@ -26,24 +19,23 @@ type Meter interface {
 }
 
 type SearchEngineMeter struct {
-	//client *seclient
+	client client.SEClient
 }
 
-func NewSearchEngineMeter() Meter {
-	return &SearchEngineMeter{}
+func NewSearchEngineMeter(c client.SEClient) Meter {
+	return &SearchEngineMeter{client: c}
 }
 
 func (s *SearchEngineMeter) Start(ctx context.Context, request string, timeoutMillis int) (SearchEngineStats, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	result := make(chan searchEngineResponse)
+	result := make(chan client.SearchEngineResponse)
 	var wgStart sync.WaitGroup
 	var wgWait sync.WaitGroup
 	wgStart.Add(1)
 	wgWait.Add(1)
 
-	go makeRequest(ctx, &wgStart, &wgWait, request, "google", result)
-	// go makeRequest(ctx, &wgStart, &wgWait, request, "google", result)
+	go s.client.MakeRequest(ctx, &wgStart, &wgWait, request, "google", result)
 
 	wgStart.Wait()
 	wgWait.Done()
@@ -61,17 +53,4 @@ func (s *SearchEngineMeter) StartForAllEngines(ctx context.Context, request stri
 	}
 
 	return stats, nil
-}
-
-func makeRequest(ctx context.Context, wgStart *sync.WaitGroup, wgWait *sync.WaitGroup, request string, engineName string, result chan<- searchEngineResponse) {
-	start := time.Now()
-	wgStart.Done()
-	wgWait.Wait()
-	resp, err := http.Get("https://www.google.com/search?q=hello")
-	requestTime := time.Now().UnixMilli() - start.UnixMilli()
-
-	select {
-	case <-ctx.Done():
-	case result <- searchEngineResponse{StatusCode: resp.StatusCode, RequestTime: requestTime, Error: err}:
-	}
 }

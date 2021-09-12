@@ -6,11 +6,13 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/stakkato95/searchmeter/internal/meter"
+	"github.com/stakkato95/searchmeter/internal/meter/client"
 	"github.com/stakkato95/searchmeter/internal/meter/transport"
 )
 
 func main() {
-	searchEngineMeter := meter.NewSearchEngineMeter()
+	seclient := client.NewClient()
+	searchEngineMeter := meter.NewSearchEngineMeter(seclient)
 	searchHttp := transport.NewHTTP(searchEngineMeter)
 
 	mux := http.NewServeMux()
@@ -24,7 +26,7 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	log.Debug().Msgf("starting server at '%s'\n", addr)
+	log.Debug().Msgf("starting server at '%s'", addr)
 	if err := server.ListenAndServe(); err != nil {
 		log.Debug().Err(err).Msgf("error when starting server at %s", addr)
 	}
