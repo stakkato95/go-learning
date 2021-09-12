@@ -19,7 +19,8 @@ type SearchEngineResponse struct {
 }
 
 type SEClient interface {
-	Do(ctx context.Context, wgStart *sync.WaitGroup, wgWait *sync.WaitGroup, e SearchEngine, i int, result chan<- SearchEngineResponse)
+	Do(ctx context.Context, wgStart *sync.WaitGroup, wgWait *sync.WaitGroup, wgAllDone *sync.WaitGroup,
+		e SearchEngine, i int, result chan<- SearchEngineResponse)
 	DoAll(ctx context.Context, wg *sync.WaitGroup, e SearchEngine, i int, result chan<- SearchEngineResponse)
 }
 
@@ -47,7 +48,12 @@ func NewClient() SEClient {
 	return &seClient{client: c}
 }
 
-func (s *seClient) Do(ctx context.Context, wgStart *sync.WaitGroup, wgWait *sync.WaitGroup, e SearchEngine, i int, result chan<- SearchEngineResponse) {
+func (s *seClient) Do(ctx context.Context, wgStart *sync.WaitGroup, wgWait *sync.WaitGroup, wgAllDone *sync.WaitGroup,
+	e SearchEngine, i int, result chan<- SearchEngineResponse) {
+	defer func() {
+		wgAllDone.Done()
+	}()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.SearchUrl, nil)
 	if err != nil {
 		log.Debug().Err(err).Msgf("error for engine '%s'", e.Name)

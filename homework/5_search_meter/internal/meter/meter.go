@@ -3,6 +3,7 @@ package meter
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stakkato95/searchmeter/internal/meter/client"
@@ -27,26 +28,37 @@ func NewSearchEngineMeter(c client.SEClient) Meter {
 }
 
 func (s *SearchEngineMeter) Start(ctx context.Context, request string, timeoutMillis int) (SearchEngineStats, error) {
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMillis)*time.Millisecond)
+	defer cancel()
 
 	resultChan := make(chan client.SearchEngineResponse)
 
+	var wgAllDone sync.WaitGroup
 	var wgStart sync.WaitGroup
 	var wgWait sync.WaitGroup
+
+	engines := client.GetSearchEngines()
+	wgAllDone.Add(len(engines))
 	wgWait.Add(1)
 
-	for i, engine := range client.GetSearchEngines() {
+	go func() {
+		wgAllDone.Wait()
+		close(resultChan)
+	}()
+	for i, engine := range engines {
 		wgStart.Add(1)
-		go s.client.Do(ctx, &wgStart, &wgWait, engine, i, resultChan)
+		go s.client.Do(ctx, &wgStart, &wgWait, &wgAllDone, engine, i, resultChan)
 	}
 
 	wgStart.Wait() //wait till all goroutines have created requests and are ready to do request
 	wgWait.Done()  //signal all goroutines to make request
-	response := <-resultChan
-	cancel()
-	close(resultChan)
-	log.Debug().Msgf("response: %s", response)
+	response, ok := <-resultChan
+	if !ok {
+		log.Debug().Msgf("no response received")
+		return SearchEngineStats{}, nil
+	}
 
+	log.Debug().Msgf("response: %s", response)
 	return SearchEngineStats{TimeMillis: response.RequestTime, EngineName: response.Name}, nil
 }
 
@@ -54,13 +66,14 @@ func (s *SearchEngineMeter) StartAll(ctx context.Context, request string) []Sear
 	var wg sync.WaitGroup
 
 	resultChan := make(chan client.SearchEngineResponse)
+
+	engines := client.GetSearchEngines()
+	wg.Add(len(engines))
+
 	go func() {
 		wg.Wait()
 		close(resultChan)
 	}()
-
-	engines := client.GetSearchEngines()
-	wg.Add(len(engines))
 	for i, engine := range engines {
 		go s.client.DoAll(ctx, &wg, engine, i, resultChan)
 	}
