@@ -16,7 +16,8 @@ func main() {
 	searchHttp := transport.NewHTTP(searchEngineMeter)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/search", searchHttp.StartSearchEngineRequest)
+	mux.HandleFunc("/meter/single", searchHttp.StartSearchEngineRequest)
+	mux.HandleFunc("/meter/all", searchHttp.StartAllSearchEnginesRequest)
 
 	addr := ":8080"
 	server := http.Server{

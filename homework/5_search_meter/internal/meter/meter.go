@@ -9,13 +9,13 @@ import (
 )
 
 type SearchEngineStats struct {
-	TimeMillis int    `json:"timeMillis"`
+	TimeMillis int64  `json:"timeMillis"`
 	EngineName string `json:"engineName"`
 }
 
 type Meter interface {
 	Start(ctx context.Context, request string, timeoutMillis int) (SearchEngineStats, error)
-	StartForAllEngines(ctx context.Context, request string) ([]SearchEngineStats, error)
+	StartAll(ctx context.Context, request string) []SearchEngineStats
 }
 
 type SearchEngineMeter struct {
@@ -29,28 +29,46 @@ func NewSearchEngineMeter(c client.SEClient) Meter {
 func (s *SearchEngineMeter) Start(ctx context.Context, request string, timeoutMillis int) (SearchEngineStats, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	result := make(chan client.SearchEngineResponse)
+	resultChan := make(chan client.SearchEngineResponse)
+
 	var wgStart sync.WaitGroup
 	var wgWait sync.WaitGroup
-	wgStart.Add(1)
 	wgWait.Add(1)
 
-	go s.client.MakeRequest(ctx, &wgStart, &wgWait, request, "google", result)
-
-	wgStart.Wait()
-	wgWait.Done()
-	resonse := <-result
-	cancel()
-	log.Debug().Msgf("response: %s", resonse)
-
-	return SearchEngineStats{TimeMillis: 100500, EngineName: "google"}, nil
-}
-
-func (s *SearchEngineMeter) StartForAllEngines(ctx context.Context, request string) ([]SearchEngineStats, error) {
-	stats := []SearchEngineStats{
-		{TimeMillis: 100500, EngineName: "google"},
-		{TimeMillis: 1, EngineName: "bing"},
+	for i, engine := range client.GetSearchEngines() {
+		wgStart.Add(1)
+		go s.client.Do(ctx, &wgStart, &wgWait, engine, i, resultChan)
 	}
 
-	return stats, nil
+	wgStart.Wait() //wait till all goroutines have created requests and are ready to do request
+	wgWait.Done()  //signal all goroutines to make request
+	response := <-resultChan
+	cancel()
+	close(resultChan)
+	log.Debug().Msgf("response: %s", response)
+
+	return SearchEngineStats{TimeMillis: response.RequestTime, EngineName: response.Name}, nil
+}
+
+func (s *SearchEngineMeter) StartAll(ctx context.Context, request string) []SearchEngineStats {
+	var wg sync.WaitGroup
+
+	resultChan := make(chan client.SearchEngineResponse)
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	engines := client.GetSearchEngines()
+	wg.Add(len(engines))
+	for i, engine := range engines {
+		go s.client.DoAll(ctx, &wg, engine, i, resultChan)
+	}
+
+	stats := make([]SearchEngineStats, 0)
+	for response := range resultChan {
+		stats = append(stats, SearchEngineStats{TimeMillis: response.RequestTime, EngineName: response.Name})
+	}
+
+	return stats
 }

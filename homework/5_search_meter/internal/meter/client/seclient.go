@@ -2,10 +2,8 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -16,11 +14,13 @@ type SearchEngineResponse struct {
 	StatusCode  int
 	RequestTime int64
 	Error       error
+	Name        string
+	Ordinal     int
 }
 
 type SEClient interface {
-	MakeRequest(ctx context.Context, wgStart *sync.WaitGroup, wgWait *sync.WaitGroup, request string, engineName string,
-		result chan<- SearchEngineResponse)
+	Do(ctx context.Context, wgStart *sync.WaitGroup, wgWait *sync.WaitGroup, e SearchEngine, i int, result chan<- SearchEngineResponse)
+	DoAll(ctx context.Context, wg *sync.WaitGroup, e SearchEngine, i int, result chan<- SearchEngineResponse)
 }
 
 type seClient struct {
@@ -47,21 +47,10 @@ func NewClient() SEClient {
 	return &seClient{client: c}
 }
 
-func (s *seClient) MakeRequest(
-	ctx context.Context,
-	wgStart *sync.WaitGroup,
-	wgWait *sync.WaitGroup,
-	request string,
-	engineName string,
-	result chan<- SearchEngineResponse) {
-	addr, err := url.ParseRequestURI(fmt.Sprintf("https://www.google.com/search?q=%s", request))
+func (s *seClient) Do(ctx context.Context, wgStart *sync.WaitGroup, wgWait *sync.WaitGroup, e SearchEngine, i int, result chan<- SearchEngineResponse) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.SearchUrl, nil)
 	if err != nil {
-		result <- SearchEngineResponse{Error: err}
-		return
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, addr.String(), nil)
-	if err != nil {
-		result <- SearchEngineResponse{Error: err}
+		log.Debug().Err(err).Msgf("error for engine '%s'", e.Name)
 		return
 	}
 
@@ -73,15 +62,44 @@ func (s *seClient) MakeRequest(
 	requestTime := time.Now().UnixMilli() - start.UnixMilli()
 
 	if err != nil {
-		result <- SearchEngineResponse{Error: err}
+		log.Debug().Err(err).Msgf("error for engine '%s'", e.Name)
 		return
 	}
 	defer resp.Body.Close()
 
 	select {
 	case <-ctx.Done():
-		log.Debug().Msg("goroutine cancelled")
+		log.Debug().Msgf("context cancelled for '%s' cancelled", e.Name)
 		return
-	case result <- SearchEngineResponse{StatusCode: resp.StatusCode, RequestTime: requestTime}:
+	case result <- SearchEngineResponse{
+		StatusCode:  resp.StatusCode,
+		RequestTime: requestTime,
+		Name:        e.Name,
+		Ordinal:     i}:
 	}
+}
+
+func (s *seClient) DoAll(ctx context.Context, wg *sync.WaitGroup, e SearchEngine, i int, result chan<- SearchEngineResponse) {
+	defer func() {
+		wg.Done()
+	}()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.SearchUrl, nil)
+	if err != nil {
+		log.Debug().Err(err).Msgf("error for engine '%s'", e.Name)
+		return
+	}
+
+	start := time.Now()
+	resp, err := s.client.Do(req)
+	requestTime := time.Now().UnixMilli() - start.UnixMilli()
+
+	if err != nil {
+		log.Debug().Err(err).Msgf("error for engine '%s'", e.Name)
+		result <- SearchEngineResponse{Name: e.Name, Ordinal: i, Error: err}
+		return
+	}
+	defer resp.Body.Close()
+
+	result <- SearchEngineResponse{StatusCode: resp.StatusCode, RequestTime: requestTime, Name: e.Name, Ordinal: i}
 }
