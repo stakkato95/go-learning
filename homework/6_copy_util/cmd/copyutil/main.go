@@ -25,6 +25,7 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
 	copyutil.Copy(copyutil.CopyConfig{
 		ChunkSize:    chunkSize,
 		CopyBytes:    copyBytes,
