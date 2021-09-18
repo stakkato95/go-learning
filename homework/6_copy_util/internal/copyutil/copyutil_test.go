@@ -52,6 +52,7 @@ func testCopyInternal(t *testing.T, cfg CopyConfig) {
 	if err != nil {
 		assert.FailNow(t, "can not create 'in' file")
 	}
+	defer os.Remove(inFile.Name())
 
 	inFileContent := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 	_, err = inFile.Write(inFileContent)
@@ -64,6 +65,7 @@ func testCopyInternal(t *testing.T, cfg CopyConfig) {
 	if err != nil {
 		assert.FailNow(t, "can not create 'out' file")
 	}
+	defer os.Remove(outFile.Name())
 
 	cfg.From = inFile.Name()
 	cfg.To = outFile.Name()
